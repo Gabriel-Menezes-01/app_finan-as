@@ -1,0 +1,41 @@
+# Codemagic Configuration for iOS Build
+# Este arquivo deve ser colocado na raiz do projeto para usar o Codemagic
+
+workflows:
+  ios-workflow:
+    name: iOS Workflow
+    max_build_duration: 30
+    
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    
+    scripts:
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+      
+      - name: Get Flutter dependencies
+        script: |
+          flutter packages pub get
+          find . -name "Podfile" -execdir pod install \;
+      
+      - name: Build iOS
+        script: |
+          flutter build ipa --release \
+            --build-name=2.5.0 \
+            --build-number=$(($(app-store-connect get-latest-app-store-build-number "$APP_STORE_ID") + 1)) \
+            --export-options-plist=/Users/builder/export_options.plist
+    
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    
+    publishing:
+      email:
+        recipients:
+          - user@example.com
+        notify:
+          success: true
+          failure: false
