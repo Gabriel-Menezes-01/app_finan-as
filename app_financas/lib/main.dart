@@ -1,105 +1,57 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:window_manager/window_manager.dart';
 import 'providers/financas_provider.dart';
 import 'screens/home_screen.dart';
+
+/// Inicializa configurações de janela para Windows Desktop
+Future<void> _initWindow() async {
+  // Inicializa window_manager somente em desktop Windows
+  if (!kIsWeb && Platform.isWindows) {
+    await windowManager.ensureInitialized();
+    const windowOptions = WindowOptions(
+      size: Size(1100, 700),
+      minimumSize: Size(900, 600),
+      center: true,
+      title: 'Finanças App',
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+}
+
+/// Inicializa Firebase apenas em plataformas suportadas (Android/iOS/Web)
+Future<void> _initFirebaseIfSupported() async {
+  // Inicializar Firebase apenas em plataformas suportadas
+  if (kIsWeb || (!kIsWeb && (Platform.isAndroid || Platform.isIOS))) {
+    try {
+      await Firebase.initializeApp();
+      print('Firebase inicializado com sucesso');
+    } catch (e) {
+      print('Firebase não disponível, continuando sem: $e');
+    }
+  } else {
+    print('Plataforma desktop detectada: pulando inicialização do Firebase');
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
   
-  // Inicializar Firebase apenas se disponível
-  try {
-    await Firebase.initializeApp();
-    print('Firebase inicializado com sucesso');
-  } catch (e) {
-    print('Firebase não disponível, continuando sem: $e');
-  }
+  // Inicializar janela (Windows Desktop)
+  await _initWindow();
+  
+  // Inicializar Firebase apenas se suportado
+  await _initFirebaseIfSupported();
   
   runApp(MyApp());
-}
-
-class AppInitializer extends StatelessWidget {
-  const AppInitializer({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _initializeApp(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return MaterialApp(
-            home: Scaffold(
-              backgroundColor: Colors.blue.shade700,
-              body: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 20),
-                    Text(
-                      'Carregando...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return MaterialApp(
-            home: Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Erro ao inicializar o app',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      snapshot.error.toString(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () => main(),
-                      child: const Text('Tentar novamente'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-
-        return MyApp();
-      },
-    );
-  }
-
-  Future<void> _initializeApp() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await initializeDateFormatting('pt_BR', null);
-    
-    try {
-      await Firebase.initializeApp();
-    } catch (e) {
-      print('Firebase não configurado, usando modo offline: $e');
-      // Continua sem Firebase para funcionar offline
-    }
-  }
 }
 
 class MyApp extends StatelessWidget {
@@ -126,5 +78,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-

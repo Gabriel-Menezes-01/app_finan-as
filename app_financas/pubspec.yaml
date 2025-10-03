@@ -72,6 +72,9 @@ dependencies:
   
   # Date picker
   flutter_datetime_picker_plus: ^2.1.0
+  
+  # Window manager for desktop support
+  window_manager: ^0.3.7
 
 dev_dependencies:
   flutter_test:
